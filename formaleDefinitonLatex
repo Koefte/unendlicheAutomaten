@@ -1,0 +1,38 @@
+\begin{definition}[Unendlicher Automat]
+Ein \emph{unendlicher Automat} ist ein Tupel
+\[
+\mathcal{A} = (E, \Sigma, N, U, \delta)
+\]
+mit den folgenden Bestandteilen:
+
+\begin{itemize}
+  \item \(E = \{ A_0(n), A_1(n), \dots \}\) ist eine (möglicherweise unendliche) Menge von Aussagen über \(n \in \mathbb{N}_0\).
+
+  \item \(\Sigma = \{ x_0, x_1, \dots, x_j, \dots \}\) ist das \emph{Eingabealphabet} mit endlich oder unendlich vielen Symbolen.
+
+  \item \(N = \mathbb{N}_0\) ist die Menge der möglichen Zustandsparameter (numerische Strukturmenge).
+
+  \item \(U = \{ f_0, f_1, \dots, f_i, \dots \}\) ist eine Menge von (möglicherweise partiellen) Abbildungen
+  \[
+  f_i : \mathbb{N}_0 \rightharpoonup \mathbb{N}_0,
+  \]
+  die jeweils einem Eingabesymbol \(x_i \in \Sigma\) zugeordnet sind.
+
+  \item Die \emph{Übergangsfunktion} ist definiert als
+  \[
+  \delta : \Sigma \times \mathbb{N}_0 \rightharpoonup \mathbb{N}_0,
+  \qquad
+  \delta(x_i, n) = f_i(n),
+  \]
+  wobei der Übergang
+  \[
+  A(n) \xrightarrow{x_i} A(\delta(x_i, n)) = A(f_i(n))
+  \]
+  genau dann existiert, wenn \(f_i(n)\) definiert ist.
+\end{itemize}
+
+Der Automat befindet sich zu jedem Zeitpunkt in einem Zustand der Form \(A(n)\),
+wobei \(n\) der aktuelle numerische Wert ist.
+Beim Lesen eines Eingabesymbols \(x_i\) wird \(n\) durch \(f_i(n)\) ersetzt,
+und der neue Zustand ist \(A(f_i(n))\).
+\end{definition}
