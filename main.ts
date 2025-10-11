@@ -1,9 +1,15 @@
 type Rule = {
-  a: (n: number) => boolean;
-  f: (n: number) => number;
-  A: string;
+  a: (n: number) => boolean; // Bedingung
+  f: (n: number) => number;  // Übergang
+  A: string;                 // Eingabesymbol
 };
 
+type Tree = {
+  n: number;
+  children: Tree[];
+};
+
+// ----- Hilfsfunktionen -----
 function patchCond(cond: string): string {
   let newCond = cond.replaceAll("=", "==");
   if (cond.trim() === "n") newCond = "n==n";
@@ -14,106 +20,165 @@ function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-function getSpeed():number{
-    const dial = document.getElementById("speedControl") as HTMLInputElement
-    console.log(dial.value)
-    return 2000 - Number(dial.value)
+function getSpeed(): number {
+  const dial = document.getElementById("speedControl") as HTMLInputElement;
+  return Math.max(100, 2000 - Number(dial.value));
 }
 
-async function animateSimulation(input: string, rules: Rule[]) {
-  const vis = document.getElementById("visualization") as HTMLDivElement;
-  const svg = document.getElementById("svgArrows") as unknown as SVGSVGElement;
-  const circle = document.getElementById("stateCircle") as HTMLDivElement;
+// ----- Canvas Setup -----
+const canvas = document.getElementById("automatonCanvas") as HTMLCanvasElement;
+const ctx = canvas.getContext("2d")!;
 
-  svg.innerHTML = ""; // Clear arrows
-  let n = 0;
-  circle.textContent = n.toString();
-  circle.style.left = "20px";
-  circle.style.top = "70px";
+let scale = 1;
+let offsetX = 0;
+let offsetY = 0;
+let dragging = false;
+let lastX = 0;
+let lastY = 0;
 
-  for (let i = 0; i < input.length; i++) {
-    const ch = input[i];
-    let found = false;
+canvas.addEventListener("mousedown", (e) => {
+  dragging = true;
+  lastX = e.clientX;
+  lastY = e.clientY;
+  canvas.style.cursor = "grabbing";
+});
+canvas.addEventListener("mouseup", () => {
+  dragging = false;
+  canvas.style.cursor = "grab";
+});
+canvas.addEventListener("mouseleave", () => (dragging = false));
+canvas.addEventListener("mousemove", (e) => {
+  if (dragging) {
+    offsetX += e.clientX - lastX;
+    offsetY += e.clientY - lastY;
+    lastX = e.clientX;
+    lastY = e.clientY;
+    drawCanvas(true); // neu zeichnen mit aktuellem Offset
+  }
+});
 
-    for (const rule of rules) {
-      if (rule.a(n) && rule.A === ch) {
-        const next = rule.f(n);
-        found = true;
+canvas.addEventListener("wheel",(e) => {
+  e.preventDefault();
+  const zoom = e.deltaY < 0 ? 1.1 : 0.9;
+  scale *= zoom;
+  drawCanvas(true);
+});
 
-        // Calculate simple positions
-        const startX =  i * 100;
-        const endX = startX + 100;
-        const y = 100;
+// ----- Baum erstellen -----
+function buildTree(input: string, rules: Rule[], n: number = 0, depth: number = 0): Tree {
+  if (depth >= input.length) return { n, children: [] };
 
-        // Draw arrow
-        const arrow = document.createElementNS("http://www.w3.org/2000/svg", "line");
-        arrow.setAttribute("x1", `${startX}`);
-        arrow.setAttribute("y1", `${y}`);
-        arrow.setAttribute("x2", `${endX}`);
-        arrow.setAttribute("y2", `${y}`);
-        arrow.setAttribute("stroke", "black");
-        arrow.setAttribute("stroke-width", "2");
-        arrow.setAttribute("marker-end", "url(#arrowhead)");
+  const ch = input[depth];
+  const children: Tree[] = [];
 
-        // Add arrowhead marker (if not already added)
-        if (!svg.querySelector("marker")) {
-          const defs = document.createElementNS("http://www.w3.org/2000/svg", "defs");
-          const marker = document.createElementNS("http://www.w3.org/2000/svg", "marker");
-          marker.setAttribute("id", "arrowhead");
-          marker.setAttribute("markerWidth", "10");
-          marker.setAttribute("markerHeight", "7");
-          marker.setAttribute("refX", "10");
-          marker.setAttribute("refY", "3.5");
-          marker.setAttribute("orient", "auto");
-          const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
-          path.setAttribute("d", "M0,0 L10,3.5 L0,7 Z");
-          path.setAttribute("fill", "black");
-          marker.appendChild(path);
-          defs.appendChild(marker);
-          svg.appendChild(defs);
-        }
-
-        const labelRule = document.createElementNS("http://www.w3.org/2000/svg", "text");
-        labelRule.setAttribute("x", `${(startX + endX) / 2}`);
-        labelRule.setAttribute("y", `${80}`);
-        labelRule.setAttribute("text-anchor", "middle");
-        labelRule.classList.add("label");
-        labelRule.textContent = rule.f.toString().slice(rule.f.toString().indexOf("{") + 1,rule.f.toString().indexOf("}")).replace("return","");
-        svg.appendChild(labelRule);
-
-        const labelCh = document.createElementNS("http://www.w3.org/2000/svg", "text");
-        labelCh.setAttribute("x", `${(startX + endX) / 2}`);
-        labelCh.setAttribute("y", `${120}`);
-        labelCh.setAttribute("text-anchor", "middle");
-        labelCh.classList.add("label");
-        labelCh.textContent = ch
-        svg.appendChild(labelCh);
-
-
-
-        svg.appendChild(arrow);
-
-        // Animate circle moving to next state
-        circle.style.left = `${endX - 30}px`;
-        circle.style.top = `${y - 30}px`;
-        circle.textContent = next.toString();
-        circle.style.background = `hsl(${(next * 60) % 360}, 70%, 50%)`;
-
-        n = next;
-        await sleep(getSpeed());
-        break;
-      }
-    }
-
-    if (!found) {
-      console.error(`No transition for state ${n} and '${ch}'`);
-      break;
+  for (const rule of rules) {
+    if (rule.A === ch && rule.a(n)) {
+      const next = rule.f(n);
+      children.push(buildTree(input, rules, next, depth + 1));
     }
   }
 
-  return n;
+  return { n, children };
 }
 
+function drawTreeInstant(node: Tree, x: number, y: number, levelSpacing: number = 120, siblingSpacing: number = 80) {
+  function drawNode(n: Tree, x: number, y: number) {
+    const childCount = n.children.length;
+    const startX = x - ((childCount - 1) * siblingSpacing) / 2;
+
+    // Knoten zeichnen
+    ctx.beginPath();
+    ctx.fillStyle = "#4CAF50";
+    ctx.arc(x, y, 25, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "white";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(n.n.toString(), x, y);
+
+
+    // Kinder zeichnen
+    for (let i = 0; i < n.children.length; i++) {
+      const child = n.children[i];
+      const childX = startX + i * siblingSpacing;
+      const childY = y + levelSpacing;
+
+      // Linie
+      ctx.strokeStyle = "black";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(x, y + 25);
+      ctx.lineTo(childX, childY - 25);
+      ctx.stroke();
+
+    drawNode(child, childX, childY);
+    }
+  }
+
+  drawNode(node, x, y);
+}
+// ----- Baum zeichnen -----
+async function drawTree(node: Tree, x: number, y: number, levelSpacing: number = 120, siblingSpacing: number = 80) {
+  async function drawNode(n: Tree, x: number, y: number) {
+    const childCount = n.children.length;
+    const startX = x - ((childCount - 1) * siblingSpacing) / 2;
+
+    // Knoten zeichnen
+    ctx.beginPath();
+    ctx.fillStyle = "#4CAF50";
+    ctx.arc(x, y, 25, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "white";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(n.n.toString(), x, y);
+
+    await sleep(getSpeed());
+
+    // Kinder zeichnen
+    for (let i = 0; i < n.children.length; i++) {
+      const child = n.children[i];
+      const childX = startX + i * siblingSpacing;
+      const childY = y + levelSpacing;
+
+      // Linie
+      ctx.strokeStyle = "black";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(x, y + 25);
+      ctx.lineTo(childX, childY - 25);
+      ctx.stroke();
+
+      await drawNode(child, childX, childY);
+    }
+  }
+
+  await drawNode(node, x, y);
+}
+
+// ----- Gesamtes Canvas zeichnen -----
+let currentTree: Tree | null = null;
+let drawing = false; // verhindert Überschneidung mehrerer Animationen
+
+async function drawCanvas(instant:boolean) {
+  if (drawing) return; // während Animation keine neue starten
+  drawing = true;
+
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  if (currentTree) {
+    ctx.save();
+    ctx.translate(offsetX, offsetY);
+    ctx.scale(scale, scale);
+    if(!instant) await drawTree(currentTree, 400, 50);
+    else drawTreeInstant(currentTree,400,60)
+    ctx.restore();
+  }
+
+  drawing = false;
+}
+
+// ----- UI -----
 document.addEventListener("DOMContentLoaded", () => {
   const textAreaRules = document.getElementById("rules") as HTMLTextAreaElement;
   const textAreaInput = document.getElementById("input") as HTMLTextAreaElement;
@@ -137,8 +202,11 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     const input = textAreaInput.value.trim();
-    output.textContent = "Simulating...";
-    const result = await animateSimulation(input, rules);
-    output.textContent = `Output: ${result}`;
+    output.textContent = "Wird simuliert...";
+    currentTree = buildTree(input, rules);
+    await drawCanvas(false);
+    output.textContent = "Simulation fertig!";
   });
+
+  drawCanvas(false);
 });
