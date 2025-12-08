@@ -62,7 +62,17 @@ n > 5, c -> n - 1
 
 Enter a sequence of symbols (e.g., `aabba`) that the automaton will process.
 
-#### 3. Final States
+#### 3. Seed (Initial State)
+
+Enter the initial state value (seed) to start the computation (e.g., `0`, `10`, `100`).
+This determines the starting value for the computation tree. Default is `0`.
+
+**Examples:**
+- `0` - Start from state 0
+- `10` - Start from state 10
+- `100` - Start from state 100
+
+#### 4. Final States
 
 Enter a JavaScript condition (predicate) that determines when computation should terminate (e.g., `n === 0`, `n < 1`, `n % 2 === 0`).
 Use `n` to reference the current state value. Leave empty if no final state condition is needed.
@@ -81,10 +91,11 @@ n % 2 === 0, a -> n / 2
 n % 2 === 1, b -> 3 * n + 1
 
 Input Word: aabba
+Seed: 10
 Final States: n === 1
 ```
 
-This simulates the Collatz conjecture where:
+This simulates the Collatz conjecture starting from state 10 where:
 - Even states use 'a' symbol: divide by 2
 - Odd states use 'b' symbol: multiply by 3 and add 1
 - Computation terminates when state reaches 1
@@ -94,9 +105,34 @@ This simulates the Collatz conjecture where:
 ### Initial Screen
 - **Rules textarea**: Top-left (400×200px) for defining automata rules
 - **Input word field**: Below rules, accepts input sequence
-- **Final states field**: Below input word, accepts a predicate condition on `n`
+- **Seed field**: Below input word, accepts a number for the initial state (default: 0)
+- **Final states field**: Below seed, accepts a predicate condition on `n`
 - **Submit button**: Triggers computation tree generation
-- **Speed slider**: Appears during visualization (initially hidden)
+- **Preset Management** (right side):
+  - **Preset Name**: Input field for naming presets
+  - **Save Preset**: Button to save current configuration
+  - **Preset Select**: Dropdown to choose from saved presets
+  - **Load**: Button to load selected preset
+  - **Delete**: Button to remove selected preset
+
+### Preset System
+
+Presets allow you to save and load complete configurations (rules, input word, seed, and final states). Presets are stored in your browser's localStorage.
+
+**To save a preset:**
+1. Enter a name in the "Preset-Name" field
+2. Click "Preset speichern"
+3. Your configuration is now saved
+
+**To load a preset:**
+1. Select a preset from the dropdown
+2. Click "Laden"
+3. All fields are populated with the saved configuration
+
+**To delete a preset:**
+1. Select a preset from the dropdown
+2. Click "Löschen"
+3. Confirm the deletion
 
 ### Visualization Screen
 - **Nodes**: Circles represent states
@@ -105,6 +141,7 @@ This simulates the Collatz conjecture where:
 - **Arrows**: Show transitions between states
 - **Text**: State numbers displayed in node centers
 - **Controls**: Zoom with mouse wheel, pan by dragging
+- **Speed slider**: Adjust animation speed during playback
 
 ## Technical Details
 

@@ -20,15 +20,30 @@ type Tree = {
   size?: number;
 };
 
+type Preset = {
+  name: string;
+  rules: string;
+  inputWord: string;
+  seed: string;
+  finalStates: string;
+};
+
 
 
 let inputField: any;
 let inputMachine : any;
+let seedInput: any;
 let submitButton: any;
 let speedSlider: any;
 let finalStatesInput: any;
+let savePresetButton: any;
+let presetNameInput: any;
+let presetSelect: any;
+let loadPresetButton: any;
+let deletePresetButton: any;
 let inputText: string = '';
 let inputWord: string = '';
+let presets: Preset[] = [];
 let computationTree: Tree | null = null;
 let nodesToDraw: Tree[] = [];
 let currentDrawIndex: number = 0;
@@ -59,16 +74,48 @@ let lastMouseY: number = 0;
   finalStatesInput.size(200);
   finalStatesInput.attribute("placeholder", "Endzustand (z.B. n === 0 oder n < 1 oder n % 2 === 0)");
 
+  seedInput = createInput("0");
+  seedInput.position(10, 310);
+  seedInput.size(200);
+  seedInput.attribute("type", "number");
+  seedInput.attribute("placeholder", "Startwert/Seed (z.B. 0)");
+
   let button = createButton("Submit");
   button.position(10, 220);
   button.mousePressed(handleSubmit);
   submitButton = button;
   
+  // Preset management UI
+  presetNameInput = createInput("");
+  presetNameInput.position(220, 250);
+  presetNameInput.size(150);
+  presetNameInput.attribute("placeholder", "Preset-Name");
+  
+  savePresetButton = createButton("Preset speichern");
+  savePresetButton.position(220, 220);
+  savePresetButton.mousePressed(saveCurrentPreset);
+  
+  presetSelect = createSelect();
+  presetSelect.position(380, 250);
+  presetSelect.size(150);
+  presetSelect.option("-- Wählen Sie ein Preset --");
+  
+  loadPresetButton = createButton("Laden");
+  loadPresetButton.position(380, 220);
+  loadPresetButton.mousePressed(loadSelectedPreset);
+  
+  deletePresetButton = createButton("Löschen");
+  deletePresetButton.position(500, 220);
+  deletePresetButton.mousePressed(deleteSelectedPreset);
+  
   // Speed slider
   speedSlider = createSlider(100, 2000, 500, 100);
-  speedSlider.position(10, 310);
+  speedSlider.position(10, 340);
   speedSlider.size(200);
   speedSlider.hide();
+  
+  // Load presets from storage
+  loadPresetsFromStorage();
   
 };
 
@@ -317,6 +364,18 @@ function handleSubmit() {
   inputWord = inputMachine.value();
   console.log('Input word:', inputWord);
   
+  // Parse seed
+  let seedStr = seedInput.value().trim();
+  let seed = 0;
+  if (seedStr) {
+    let parsedSeed = parseInt(seedStr);
+    if (isNaN(parsedSeed)) {
+      throw new Error(`Invalid seed: ${seedStr}. Please enter a number.`);
+    }
+    seed = parsedSeed;
+  }
+  console.log('Seed:', seed);
+  
   // Parse final state predicate
   let finalStateStr = finalStatesInput.value().trim();
   if (finalStateStr) {
@@ -324,14 +383,15 @@ function handleSubmit() {
       finalStatePredicate = new Function("n", `return ${finalStateStr}`) as (n: number) => boolean;
       console.log('Final state predicate:', finalStateStr);
     } catch (e) {
-      throw new Error(`Invalid final state condition: ${finalStateStr}`);
+      console.error('Error parsing final state condition:', e);
+      throw new Error(`Invalid final state condition: ${finalStateStr}. Error: ${(e as Error).message}`);
     }
   } else {
     finalStatePredicate = () => false;
   }
   
   // Build the computation tree
-  computationTree = buildComputationTree(currentState, 0, inputWord, rules);
+  computationTree = buildComputationTree(seed, 0, inputWord, rules);
   
   // Flatten tree for animation
   nodesToDraw = flattenTree(computationTree);
@@ -345,7 +405,13 @@ function handleSubmit() {
   //hide input elements
   inputField.hide();
   inputMachine.hide();
+  seedInput.hide();
   finalStatesInput.hide();
+  presetNameInput.hide();
+  savePresetButton.hide();
+  presetSelect.hide();
+  loadPresetButton.hide();
+  deletePresetButton.hide();
   submitButton.hide();
   speedSlider.show();
 }
@@ -374,6 +440,89 @@ function parseRules(rulesInput: string): Rule[] {
 
     
   return rules;
+}
+
+function savePresetsToStorage() {
+  localStorage.setItem('automata_presets', JSON.stringify(presets));
+  console.log('Presets saved to storage');
+}
+
+function loadPresetsFromStorage() {
+  let stored = localStorage.getItem('automata_presets');
+  if (stored) {
+    presets = JSON.parse(stored);
+    console.log('Presets loaded from storage:', presets);
+    updatePresetSelect();
+  }
+}
+
+function updatePresetSelect() {
+  // Clear existing options
+  presetSelect.elt.innerHTML = '<option value="">-- Wählen Sie ein Preset --</option>';
+  
+  // Add preset options
+  for (let preset of presets) {
+    let option = document.createElement('option');
+    option.value = preset.name;
+    option.text = preset.name;
+    presetSelect.elt.appendChild(option);
+  }
+}
+
+function saveCurrentPreset() {
+  let presetName = presetNameInput.value().trim();
+  if (!presetName) {
+    alert('Bitte geben Sie einen Namen für das Preset ein.');
+    return;
+  }
+  
+  let newPreset: Preset = {
+    name: presetName,
+    rules: inputField.value(),
+    inputWord: inputMachine.value(),
+    seed: seedInput.value(),
+    finalStates: finalStatesInput.value()
+  };
+  
+  // Remove existing preset with same name
+  presets = presets.filter(p => p.name !== presetName);
+  
+  // Add new preset
+  presets.push(newPreset);
+  savePresetsToStorage();
+  
+  presetNameInput.value('');
+  alert(`Preset '${presetName}' gespeichert!`);
+}
+
+function loadSelectedPreset() {
+  let selectedName = presetSelect.value();
+  if (!selectedName) return;
+  
+  let preset = presets.find(p => p.name === selectedName);
+  if (preset) {
+    inputField.value(preset.rules);
+    inputMachine.value(preset.inputWord);
+    seedInput.value(preset.seed);
+    finalStatesInput.value(preset.finalStates);
+    console.log('Preset geladen:', preset.name);
+  }
+}
+
+function deleteSelectedPreset() {
+  let selectedName = presetSelect.value();
+  if (!selectedName) {
+    alert('Bitte wählen Sie ein Preset aus.');
+    return;
+  }
+  
+  if (confirm(`Möchten Sie das Preset '${selectedName}' löschen?`)) {
+    presets = presets.filter(p => p.name !== selectedName);
+    savePresetsToStorage();
+    presetSelect.value('');
+    updatePresetSelect();
+    alert(`Preset '${selectedName}' gelöscht!`);
+  }
 }
 
 function displayRule(rule: Rule): string {
