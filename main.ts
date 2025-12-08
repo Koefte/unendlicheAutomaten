@@ -3,7 +3,7 @@ let DRAW = false;
 let rules: Rule[] = [];
 let currentState: number = 0;
 let inputPosition: number = 0;
-let finalStates: number[] = [];
+let finalStatePredicate: (n: number) => boolean = () => false;
 
 type Rule = {
   a: (n: number) => boolean; // Bedingung
@@ -57,7 +57,7 @@ let lastMouseY: number = 0;
   finalStatesInput = createInput("");
   finalStatesInput.position(10, 280);
   finalStatesInput.size(200);
-  finalStatesInput.attribute("placeholder", "Endzustände (durch Komma getrennt, z.B. 0,1,2)");
+  finalStatesInput.attribute("placeholder", "Endzustand (z.B. n === 0 oder n < 1 oder n % 2 === 0)");
 
   let button = createButton("Submit");
   button.position(10, 220);
@@ -199,7 +199,7 @@ function buildComputationTree(state: number, inputPos: number, word: string, rul
   let node: Tree = { state, inputPos, children: [], size };
   
   // Base case: reached final state - terminate
-  if (finalStates.includes(state)) {
+  if (finalStatePredicate(state)) {
     return node;
   }
   
@@ -273,7 +273,7 @@ function drawTreePartial(node: Tree, maxNodes: number, drawnNodes: Set<Tree> = n
   let nodeSize = node.size || 40;
   
   // Check if this is a final state
-  let isFinalState = finalStates.includes(node.state);
+  let isFinalState = finalStatePredicate(node.state);
   
   if (isFinalState) {
     // Final states are filled with a different color and have a double circle
@@ -317,19 +317,17 @@ function handleSubmit() {
   inputWord = inputMachine.value();
   console.log('Input word:', inputWord);
   
-  // Parse final states
-  let finalStatesStr = finalStatesInput.value().trim();
-  if (finalStatesStr) {
-    finalStates = finalStatesStr.split(',').map((s: string) => {
-      let num = parseInt(s.trim());
-      if (isNaN(num)) {
-        throw new Error(`Invalid final state: ${s}`);
-      }
-      return num;
-    });
-    console.log('Final states:', finalStates);
+  // Parse final state predicate
+  let finalStateStr = finalStatesInput.value().trim();
+  if (finalStateStr) {
+    try {
+      finalStatePredicate = new Function("n", `return ${finalStateStr}`) as (n: number) => boolean;
+      console.log('Final state predicate:', finalStateStr);
+    } catch (e) {
+      throw new Error(`Invalid final state condition: ${finalStateStr}`);
+    }
   } else {
-    finalStates = [];
+    finalStatePredicate = () => false;
   }
   
   // Build the computation tree
