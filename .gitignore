@@ -1,4 +1,4 @@
 /node_modules
-*.d.ts
-*.d.ts.map
+main.d.ts
+main.d.ts.map
 main.js
