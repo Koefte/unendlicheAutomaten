@@ -3,6 +3,7 @@ let DRAW = false;
 let rules: Rule[] = [];
 let currentState: number = 0;
 let inputPosition: number = 0;
+let finalStates: number[] = [];
 
 type Rule = {
   a: (n: number) => boolean; // Bedingung
@@ -25,6 +26,7 @@ let inputField: any;
 let inputMachine : any;
 let submitButton: any;
 let speedSlider: any;
+let finalStatesInput: any;
 let inputText: string = '';
 let inputWord: string = '';
 let computationTree: Tree | null = null;
@@ -52,6 +54,11 @@ let lastMouseY: number = 0;
   inputMachine.size(200);
   inputMachine.attribute("placeholder", "Eingabewort hier eingeben");
 
+  finalStatesInput = createInput("");
+  finalStatesInput.position(10, 280);
+  finalStatesInput.size(200);
+  finalStatesInput.attribute("placeholder", "Endzustände (durch Komma getrennt, z.B. 0,1,2)");
+
   let button = createButton("Submit");
   button.position(10, 220);
   button.mousePressed(handleSubmit);
@@ -59,7 +66,7 @@ let lastMouseY: number = 0;
   
   // Speed slider
   speedSlider = createSlider(100, 2000, 500, 100);
-  speedSlider.position(10, 290);
+  speedSlider.position(10, 310);
   speedSlider.size(200);
   speedSlider.hide();
   
@@ -191,6 +198,11 @@ function buildComputationTree(state: number, inputPos: number, word: string, rul
   let size = Math.max(10, 40 * Math.pow(0.9, depth));
   let node: Tree = { state, inputPos, children: [], size };
   
+  // Base case: reached final state - terminate
+  if (finalStates.includes(state)) {
+    return node;
+  }
+  
   // Base case: reached end of input or max depth
   if (inputPos >= word.length || maxDepth <= 0) {
     return node;
@@ -259,10 +271,27 @@ function drawTreePartial(node: Tree, maxNodes: number, drawnNodes: Set<Tree> = n
   
   // Draw node
   let nodeSize = node.size || 40;
-  fill(200, 220, 255);
-  stroke(0);
-  strokeWeight(2);
-  ellipse(node.x, node.y, nodeSize, nodeSize);
+  
+  // Check if this is a final state
+  let isFinalState = finalStates.includes(node.state);
+  
+  if (isFinalState) {
+    // Final states are filled with a different color and have a double circle
+    fill(100, 200, 100);
+    stroke(0);
+    strokeWeight(2);
+    ellipse(node.x, node.y, nodeSize, nodeSize);
+    stroke(0);
+    strokeWeight(2);
+    noFill();
+    ellipse(node.x, node.y, nodeSize + 8, nodeSize + 8);
+  } else {
+    fill(200, 220, 255);
+    stroke(0);
+    strokeWeight(2);
+    ellipse(node.x, node.y, nodeSize, nodeSize);
+  }
+  
   fill(0);
   noStroke();
   textAlign(CENTER, CENTER);
@@ -288,6 +317,21 @@ function handleSubmit() {
   inputWord = inputMachine.value();
   console.log('Input word:', inputWord);
   
+  // Parse final states
+  let finalStatesStr = finalStatesInput.value().trim();
+  if (finalStatesStr) {
+    finalStates = finalStatesStr.split(',').map((s: string) => {
+      let num = parseInt(s.trim());
+      if (isNaN(num)) {
+        throw new Error(`Invalid final state: ${s}`);
+      }
+      return num;
+    });
+    console.log('Final states:', finalStates);
+  } else {
+    finalStates = [];
+  }
+  
   // Build the computation tree
   computationTree = buildComputationTree(currentState, 0, inputWord, rules);
   
@@ -303,6 +347,7 @@ function handleSubmit() {
   //hide input elements
   inputField.hide();
   inputMachine.hide();
+  finalStatesInput.hide();
   submitButton.hide();
   speedSlider.show();
 }
