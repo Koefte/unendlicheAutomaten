@@ -1,0 +1,231 @@
+\documentclass[a4paper,12pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage{amssymb,amsmath,latexsym}
+\usepackage[a4paper,top=3cm,bottom=2cm,left=3cm,right=3cm]{geometry}
+\usepackage{hyperref}
+
+\begin{document}
+
+\section{Unendliche Automaten}
+
+Ein unendlicher Automat wird beschrieben durch das Tupel
+\[
+M = (\Sigma, \varphi, A, \delta, E, r),
+\]
+wobei:
+\begin{itemize}
+    \item $\Sigma$ das Eingabealphabet ist.
+    \item $\varphi$ die Menge aller Abbildungen $\mathbb{R} \to \mathbb{R}$ ist.
+    \item $A$ die Menge aller Abbildungen $a : \mathbb{R} \to \{0,1\}$ ist.
+    \item $\delta : A \times \Sigma \to \varphi$ die Übergangsfunktion ist.
+    \item $E \subseteq A$ die Menge der Endzustände ist.
+    \item $r \in \mathbb{R}$ der Anfangswert ist.
+\end{itemize}
+
+Dabei werden die Werte $\{0, 1\}$ als Wahrheitswerte interpretiert.
+
+\subsection{Abgrenzung zum endlichen Automaten}
+
+Ein unendlicher Automat unterscheidet sich von einem endlichen Automaten dadurch, dass er keinen endlichen Zustandsraum besitzt, sondern einen Wert aus $\mathbb{R}$ speichert.
+
+\paragraph{Eingabeverarbeitung.}
+Wie bei einem herkömmlichen endlichen Automaten wird die Eingabe vom unendlichen Automaten linear abgearbeitet, d.h. für ein Eingabewort der Länge $n$ werden die
+Symbole der Eingabe in der Reihenfolge $1, 2, \dots, n$ nacheinander gelesen. Dies bedeutet nicht, dass der Automat insgesamt nur $n$ Schritte ausführen darf, da nach jedem Schritt die Rechenfunktionen $\varphi$ auf dem aktuellen Wert $r$ beliebig komplexe Berechnungen durchführen können.
+
+\subsection{Nichtdeterministisches Beispiel}
+
+Zur Zeit $n$ speichert der Automat eine Menge von Werten
+\[
+W_n \subseteq \mathbb{R}.
+\]
+
+Für ein $w \in W_n$ ist die aktive Zustandsmenge
+\[
+Z(w) = \{ a \in A \mid a(w) = 1 \}.
+\]
+
+$Z(w)$ ist ein Endzustand, falls
+\[
+Z(w) \cap E \neq \emptyset.
+\]
+
+Falls kein Endzustand erreicht ist, ergibt die Übergangsfunktion die Menge der Folgezustände:
+\[
+W_{n+1}(w) = \{ f(w) \mid f \in F \},
+\qquad
+F = \{ \delta(a,b) \mid a \in Z(w) \}.
+\]
+
+\section{Heuristische Wachstumsabschätzung}
+
+
+\subsection{Wachstumsabschätzung der Zustände}
+Für jedes $a \in A$ betrachten wir die Menge möglicher Folgezustände
+\[
+A'_{a,f}
+=
+\{\, a' \in A \mid a(w)=1 \Rightarrow a'(f(w)) = 1 \,\},
+\quad f = \delta(a,b).
+\]
+
+Wir definieren
+\[
+c_a
+=
+\frac{1}{|\Sigma_a|}
+\sum_{b \in \Sigma_a} |A'(a,\delta(a,b))|,
+\]
+wobei
+\[
+\Sigma_a = \{ b \in \Sigma \mid \delta(a,b) \neq \emptyset \}.
+\]
+
+Die Wachstumsrate des Automaten ist
+\[
+w = \frac{1}{|A|} \sum_{a \in A} c_a.
+\]
+
+\subsection{Wachstumsabschätzung von r}
+
+Für jedes $b \in \Sigma$ definieren wir 
+\[
+F_b = \delta(A \times b)
+\]
+Wir konstruieren nun eine Funktion 
+\[
+\lambda : \mathbb{R} \to \mathbb{R}, \qquad 
+x \mapsto \lambda(x),
+\]
+wobei
+\[
+\lambda_b(x) = \frac{\displaystyle \prod_{f \in F_b} f(x)}{|F_b|}.
+\]
+
+Dann definieren wir 
+\[
+w_r = \frac{\displaystyle \prod_{b \in \Sigma} \lambda_b}{|\Sigma|} 
+\]
+als Wachtumsrate von r
+
+
+
+
+\section{Sprachen des Automaten}
+
+Da jeder endliche Automat ein Spezialfall eines unendlichen Automaten ist, können unendliche Automaten reguläre Sprachen erkennen.
+
+Weiterhin ist bekannt, dass Kellerautomaten (Pushdown-Automaten) kontextfreie Sprachen erkennen.  
+Wir zeigen, dass man jeden Kellerautomaten in einen unendlichen Automaten übersetzen kann.
+
+\subsection{Kodierung von Zustand und Keller}
+
+Wir interpretieren
+\[
+\lfloor r \rfloor \text{ als Zustand}, \qquad r \bmod 1 \text{ als Kellerinhalt}.
+\]
+
+Für einen Kellerautomaten mit $n$ Zuständen definieren wir:
+\[
+A =
+\left\{
+x \mapsto
+\left( \lfloor x \rfloor = i \right)
+\;\middle|\;
+i \in \{1,\dots,n\}
+\right\}.
+\]
+
+Es bleibt, den Kellerspeicher in $(0,1)$ zu kodieren.
+
+\subsection{Gödelisierung des Kellers}
+
+Sei $\Gamma$ das Kelleralphabet.  
+Da $\Gamma$ endlich ist, existiert eine injektive Kodierung
+\[
+\mathrm{code} : \Gamma \to \mathbb{N}.
+\]
+
+Für ein Wort $g = g_1 g_2 \dots g_n \in \Gamma^\*$ sei
+\[
+x_i = p_i^{\mathrm{code}(g_i)},
+\]
+wobei $(p_i)$ die Folge der Primzahlen ist.
+
+Wir benutzen die Funktionen
+\[
+\psi(x) = \frac{1}{x+1},
+\qquad
+\psi^{-1}(y) = \frac{1}{y} - 1.
+\]
+
+Die Kellerkodierung ist
+\[
+\kappa(g) = \psi\left( \prod_{i=1}^n x_i \right).
+\]
+
+\subsection{Stack-Operationen}
+
+\paragraph{Top-Operation.}
+\[
+\mathrm{top}(r) = \max\{ e \mid 2^e \text{ teilt } \psi^{-1}(r) \}.
+\]
+
+\paragraph{Pop-Operation.}
+\[
+\mathrm{pop}(r)
+=
+\frac{\psi^{-1}(r)}{2^{\mathrm{top}(r)}}.
+\]
+
+\paragraph{Push-Operation.}
+\[
+\mathrm{push}_r(g)
+=
+\psi\!\left(
+2^{\mathrm{code}(g)} \cdot
+\mathrm{shift}\bigl( \kappa^{-1}(\psi^{-1}(r \bmod 1)) \bigr)
+\right),
+\]
+wobei
+\[
+\mathrm{shift}(g_1 g_2 \dots g_n)
+=
+\prod_{i=1}^n p_{i+1}^{\mathrm{code}(g_i)}.
+\]
+
+\section{Übersetzung der Kellerautomaten-Übergänge}
+
+Ein Übergang des Kellerautomaten sei gegeben durch das Quintupel:
+\[
+(z_i, a, g_i, z_j, g_j),
+\]
+mit Zustand $z_i$, Eingabe $a$, Top-Symbol $g_i$, Folgezustand $z_j$ und neuem Symbol $g_j$.
+
+Wir konstruieren dazu
+\[
+\hat a \in A,
+\qquad
+\hat a(r) = 1
+\iff
+\left( \lfloor r \rfloor = z_i \text{ und } \mathrm{top}(r \bmod 1) = \mathrm{code}(g_i) \right).
+\]
+
+Die Übergangsfunktion des unendlichen Automaten ist nun
+\[
+\delta(\hat a, a) = f,
+\]
+mit
+\[
+f(r) = z_j + \mathrm{push}_{\mathrm{pop}(r \bmod 1)}(g_j).
+\]
+
+Abschließend definieren wir den Startwert
+\[
+r = z_0 + \kappa(\#),
+\]
+wobei \# das Anfangssymbol des Kellers bezeichnet.
+
+Damit kann zu jedem Kellerautomaten ein äquivalenter unendlicher Automat konstruiert werden.  
+Daraus folgt, dass unendliche Automaten kontextfreie Sprachen entscheiden können.
+
+\end{document}

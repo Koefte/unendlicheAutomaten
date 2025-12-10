@@ -55,6 +55,7 @@ let panY: number = 0;
 let isDragging: boolean = false;
 let lastMouseX: number = 0;
 let lastMouseY: number = 0;
+let growthRateWr: number = 0;
 
 (window as any).setup = function() {
   createCanvas(windowWidth, windowHeight);
@@ -180,6 +181,7 @@ let lastMouseY: number = 0;
     text('Zoom: ' + zoomLevel.toFixed(2) + 'x', 10, 30);
     text('Pan/Drag: Click and drag', 10, 50);
     text('Zoom: Mouse wheel', 10, 70);
+    text('Growth Rate (w_r): ' + growthRateWr.toFixed(4), 10, 90);
     
     // Apply pan and zoom transformations
     push();
@@ -238,6 +240,49 @@ function drawCircle(x: number, y: number, radius: number, label: string, size: n
   textSize(size);
   text(label, x, y);
   fill(255);
+}
+
+function calculateGrowthRateWr(inputWord: string, rules: Rule[], seed: number): number {
+  // Calculate w_r as defined:
+  // For each b ∈ Σ: F_b = δ(A × b) = set of all transition functions for symbol b
+  // λ_b(x) = (∏_{f∈F_b} f(x)) / |F_b|
+  // w_r = (∏_{b∈Σ} λ_b) / |Σ|
+  
+  if (rules.length === 0 || inputWord.length === 0) return 0;
+  
+  // Extract unique input symbols from the word
+  let inputSymbols = Array.from(new Set(inputWord.split('')));
+  
+  // For each symbol b, calculate λ_b(seed)
+  let productOfLambdas = 1;
+  
+  for (let symbol of inputSymbols) {
+    // Get F_b: all transition functions for this symbol
+    let transitionFunctions: ((n: number) => number)[] = [];
+    
+    for (let rule of rules) {
+      if (rule.A === symbol) {
+        transitionFunctions.push(rule.f);
+      }
+    }
+    
+    if (transitionFunctions.length === 0) continue;
+    
+    // Calculate λ_b(seed) = (∏_{f∈F_b} f(seed)) / |F_b|
+    let productOfTransitions = 1;
+    for (let f of transitionFunctions) {
+      let result = f(seed);
+      productOfTransitions *= result;
+    }
+    
+    let lambda_b = productOfTransitions / transitionFunctions.length;
+    productOfLambdas *= lambda_b;
+  }
+  
+  // w_r = (∏_{b∈Σ} λ_b) / |Σ|
+  let w_r = productOfLambdas / inputSymbols.length;
+  
+  return w_r;
 }
 
 function buildComputationTree(state: number, inputPos: number, word: string, rules: Rule[], maxDepth: number = 20, depth: number = 0): Tree {
@@ -389,6 +434,10 @@ function handleSubmit() {
   } else {
     finalStatePredicate = () => false;
   }
+  
+  // Calculate growth rate w_r
+  growthRateWr = calculateGrowthRateWr(inputWord, rules, seed);
+  console.log('Growth rate (w_r):', growthRateWr);
   
   // Build the computation tree
   computationTree = buildComputationTree(seed, 0, inputWord, rules);
